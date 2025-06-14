@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  marketplace-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: marketplace-service
+    ports:
+      - "8095:80"
+    volumes:
+      - ./:/var/www/html
+     
+
+   
+
+networks:
+  laravel-network:
+    external: true
