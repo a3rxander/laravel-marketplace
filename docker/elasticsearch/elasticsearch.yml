@@ -1,0 +1,153 @@
+# ======================== Elasticsearch Configuration =========================
+#
+# NOTE: Elasticsearch comes with reasonable defaults for most settings.
+#       Before you set out to tweak and tune the configuration, make sure you
+#       understand what are you trying to accomplish and the consequences.
+#
+# The primary way of configuring a node is via this file. This template lists
+# the most important settings you may want to configure for a production cluster.
+#
+# Please consult the documentation for further information on configuration options:
+# https://www.elastic.co/guide/en/elasticsearch/reference/index.html
+#
+# ---------------------------------- Cluster -----------------------------------
+#
+# Use a descriptive name for your cluster:
+#
+cluster.name: marketplace-search-cluster
+
+# ------------------------------------ Node ------------------------------------
+#
+# Use a descriptive name for the node:
+#
+node.name: marketplace-node-1
+
+# Add custom attributes to the node:
+#
+# node.attr.rack: r1
+
+# Enable node as master and data node
+node.master: true
+node.data: true
+node.ingest: true
+
+# ----------------------------------- Paths ------------------------------------
+#
+# Path to directory where to store the data (separate multiple locations by comma):
+#
+path.data: /usr/share/elasticsearch/data
+
+# Path to log files:
+#
+path.logs: /usr/share/elasticsearch/logs
+
+# ----------------------------------- Memory -----------------------------------
+#
+# Lock the memory on startup:
+#
+bootstrap.memory_lock: false
+
+# ---------------------------------- Network -----------------------------------
+#
+# By default Elasticsearch is only accessible on localhost. Set a different
+# address here to expose this node on the network:
+#
+network.host: 0.0.0.0
+
+# By default Elasticsearch listens for HTTP traffic on the first free port it
+# finds starting at 9200. Set a specific HTTP port here:
+#
+http.port: 9200
+
+# Transport port for inter-node communication
+transport.tcp.port: 9300
+
+# --------------------------------- Discovery ----------------------------------
+#
+# Pass an initial list of hosts to perform discovery when this node is started:
+# The default list of hosts is ["127.0.0.1", "[::1]"]
+#
+discovery.type: single-node
+
+# Prevent the "split brain" by configuring the majority of nodes (total number of master-eligible nodes / 2 + 1):
+#
+# discovery.zen.minimum_master_nodes: 1
+
+# ---------------------------------- Various -----------------------------------
+#
+# Require explicit names when deleting indices:
+#
+action.destructive_requires_name: true
+
+# ---------------------------------- Security ----------------------------------
+#
+# Disable security features for development
+xpack.security.enabled: false
+xpack.monitoring.enabled: false
+xpack.ml.enabled: false
+xpack.graph.enabled: false
+xpack.watcher.enabled: false
+
+# ---------------------------------- Performance ----------------------------------
+#
+# JVM Heap settings (handled by ES_JAVA_OPTS in docker-compose)
+# -Xms512m
+# -Xmx512m
+
+# Thread pool settings
+thread_pool.write.queue_size: 1000
+thread_pool.search.queue_size: 1000
+
+# Index settings
+indices.memory.index_buffer_size: 10%
+indices.memory.min_index_buffer_size: 48mb
+
+# Refresh interval for better indexing performance
+index.refresh_interval: 30s
+
+# ---------------------------------- Logging -----------------------------------
+#
+# Set logging level
+logger.level: INFO
+
+# Slow query logging
+index.search.slowlog.threshold.query.warn: 10s
+index.search.slowlog.threshold.query.info: 5s
+index.search.slowlog.threshold.query.debug: 2s
+index.search.slowlog.threshold.query.trace: 500ms
+
+index.indexing.slowlog.threshold.index.warn: 10s
+index.indexing.slowlog.threshold.index.info: 5s
+index.indexing.slowlog.threshold.index.debug: 2s
+index.indexing.slowlog.threshold.index.trace: 500ms
+
+# ---------------------------------- Marketplace Specific ----------------------------------
+#
+# Custom settings for marketplace search functionality
+
+# Default number of shards for new indices
+index.number_of_shards: 1
+index.number_of_replicas: 0
+
+# Auto-create index patterns for marketplace
+action.auto_create_index: +marketplace_*,+products_*,+vendors_*,-*
+
+# Maximum number of terms in a terms query (for faceted search)
+indices.query.bool.max_clause_count: 10000
+
+# Maximum result window for pagination
+index.max_result_window: 100000
+
+# Configure for product search optimization
+index.mapping.total_fields.limit: 2000
+index.mapping.depth.limit: 20
+index.mapping.nested_fields.limit: 100
+
+# Analysis settings for better search
+index.analysis.analyzer.default.type: standard
+index.analysis.analyzer.default.stopwords: _none_
+
+# Circuit breaker settings
+indices.breaker.total.limit: 70%
+indices.breaker.request.limit: 40%
+indices.breaker.fielddata.limit: 40%

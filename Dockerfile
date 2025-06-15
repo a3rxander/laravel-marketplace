@@ -1,51 +1,78 @@
-# Use the official PHP image as the base image
-FROM php:8.2-apache
+FROM php:8.2-fpm
 
-# Set the working directory in the container
-WORKDIR /var/www/html
+# Set working directory
+WORKDIR /var/www
 
 # Install system dependencies
-# Install PHP extensions
 RUN apt-get update && apt-get install -y \
+    git \
+    curl \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    libzip-dev \
     zip \
     unzip \
-    libzip-dev \
-&& docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+    libicu-dev \
+    libpq-dev \
+    libmemcached-dev \
+    libssl-dev \
+    libmcrypt-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    cron \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install PHP extensions
+RUN docker-php-ext-install \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip \
+    intl \
+    opcache
+
+# Install Redis extension
+RUN pecl install redis && docker-php-ext-enable redis
+
+# Install Memcached extension
+RUN pecl install memcached && docker-php-ext-enable memcached
+
+# Configure GD extension
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy the application files to the container
-COPY . .
+# Copy existing application directory contents
+COPY ./src /var/www
 
-# Install application dependencies
-RUN composer install
+# Copy supervisor configuration
+COPY ./docker/php/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create supervisor log directory
+RUN mkdir -p /var/log/supervisor
+
+# Copy existing application directory permissions
+RUN chown -R www-data:www-data /var/www \
+    && chmod -R 755 /var/www/storage \
+    && chmod -R 755 /var/www/bootstrap/cache
+
+# Install Composer dependencies
+RUN composer install --optimize-autoloader --no-dev --no-interaction
 
 # Generate application key
-RUN php artisan key:generate
-RUN php artisan config:cache
-RUN php artisan cache:clear
-RUN php artisan route:clear
-RUN php artisan view:clear
-RUN php artisan optimize
+RUN php artisan key:generate --no-interaction
 
-RUN chmod -R 777 storage
+# Cache configuration
+RUN php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache
 
-
-# Set the document root
-RUN sed -i -e 's/html/html\/public/g' /etc/apache2/sites-available/000-default.conf
-
-# Enable Apache rewrite module
-RUN a2enmod rewrite
-
-
-
-# Expose port 80
-EXPOSE 80
-
-# Start the Apache server
-CMD ["apache2-foreground"]
+# Expose port 9000 and start supervisord
+EXPOSE 9000
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

@@ -1,0 +1,265 @@
+marketplace-multivendor/
+├── README.md
+├── docker-compose.yml
+├── Dockerfile
+├── .env.docker
+├── .gitignore
+├── Makefile
+│
+├── docker/
+│   ├── nginx/
+│   │   └── default.conf
+│   ├── php/
+│   │   ├── local.ini
+│   │   └── supervisord.conf
+│   ├── mysql/
+│   │   └── my.cnf
+│   └── elasticsearch/
+│       └── elasticsearch.yml
+│
+├── src/                          # Laravel Application
+│   ├── app/
+│   │   ├── Console/
+│   │   │   ├── Commands/
+│   │   │   └── Kernel.php
+│   │   ├── Exceptions/
+│   │   │   └── Handler.php
+│   │   ├── Http/
+│   │   │   ├── Controllers/
+│   │   │   │   ├── Api/
+│   │   │   │   │   ├── V1/
+│   │   │   │   │   │   ├── Auth/
+│   │   │   │   │   │   ├── Vendor/
+│   │   │   │   │   │   ├── Product/
+│   │   │   │   │   │   ├── Order/
+│   │   │   │   │   │   └── User/
+│   │   │   │   │   └── BaseApiController.php
+│   │   │   │   ├── Admin/
+│   │   │   │   │   ├── DashboardController.php
+│   │   │   │   │   ├── VendorController.php
+│   │   │   │   │   ├── ProductController.php
+│   │   │   │   │   └── OrderController.php
+│   │   │   │   ├── Vendor/
+│   │   │   │   │   ├── DashboardController.php
+│   │   │   │   │   ├── ProductController.php
+│   │   │   │   │   └── OrderController.php
+│   │   │   │   ├── Auth/
+│   │   │   │   └── Frontend/
+│   │   │   │       ├── HomeController.php
+│   │   │   │       ├── ProductController.php
+│   │   │   │       ├── CartController.php
+│   │   │   │       └── CheckoutController.php
+│   │   │   ├── Middleware/
+│   │   │   │   ├── IsVendor.php
+│   │   │   │   ├── IsAdmin.php
+│   │   │   │   └── CheckVendorStatus.php
+│   │   │   ├── Requests/
+│   │   │   │   ├── Auth/
+│   │   │   │   ├── Product/
+│   │   │   │   ├── Vendor/
+│   │   │   │   └── Order/
+│   │   │   ├── Resources/
+│   │   │   │   ├── ProductResource.php
+│   │   │   │   ├── VendorResource.php
+│   │   │   │   └── OrderResource.php
+│   │   │   └── Kernel.php
+│   │   ├── Models/
+│   │   │   ├── User.php
+│   │   │   ├── Vendor.php
+│   │   │   ├── Product.php
+│   │   │   ├── Category.php
+│   │   │   ├── Order.php
+│   │   │   ├── OrderItem.php
+│   │   │   ├── Cart.php
+│   │   │   ├── Review.php
+│   │   │   └── Address.php
+│   │   ├── Services/
+│   │   │   ├── AuthService.php
+│   │   │   ├── ProductService.php
+│   │   │   ├── VendorService.php
+│   │   │   ├── OrderService.php
+│   │   │   ├── PaymentService.php
+│   │   │   ├── NotificationService.php
+│   │   │   ├── SearchService.php
+│   │   │   └── ReportService.php
+│   │   ├── Repositories/
+│   │   │   ├── Contracts/
+│   │   │   │   ├── UserRepositoryInterface.php
+│   │   │   │   ├── ProductRepositoryInterface.php
+│   │   │   │   ├── VendorRepositoryInterface.php
+│   │   │   │   └── OrderRepositoryInterface.php
+│   │   │   ├── Eloquent/
+│   │   │   │   ├── BaseRepository.php
+│   │   │   │   ├── UserRepository.php
+│   │   │   │   ├── ProductRepository.php
+│   │   │   │   ├── VendorRepository.php
+│   │   │   │   └── OrderRepository.php
+│   │   │   └── RepositoryServiceProvider.php
+│   │   ├── Jobs/
+│   │   │   ├── SendWelcomeEmail.php
+│   │   │   ├── ProcessOrderNotification.php
+│   │   │   ├── GenerateDailySalesReport.php
+│   │   │   ├── UpdateProductSearchIndex.php
+│   │   │   └── ProcessPaymentWebhook.php
+│   │   ├── Mail/
+│   │   │   ├── WelcomeVendor.php
+│   │   │   ├── OrderConfirmation.php
+│   │   │   ├── VendorApproved.php
+│   │   │   └── DailySalesReport.php
+│   │   ├── Notifications/
+│   │   │   ├── OrderPlaced.php
+│   │   │   ├── VendorStatusChanged.php
+│   │   │   └── LowStockAlert.php
+│   │   ├── Events/
+│   │   │   ├── OrderPlaced.php
+│   │   │   ├── ProductCreated.php
+│   │   │   ├── VendorApproved.php
+│   │   │   └── UserRegistered.php
+│   │   ├── Listeners/
+│   │   │   ├── SendOrderNotification.php
+│   │   │   ├── UpdateSearchIndex.php
+│   │   │   └── LogUserActivity.php
+│   │   ├── Traits/
+│   │   │   ├── HasSlug.php
+│   │   │   ├── HasMedia.php
+│   │   │   └── Searchable.php
+│   │   └── Providers/
+│   │       ├── AppServiceProvider.php
+│   │       ├── AuthServiceProvider.php
+│   │       ├── EventServiceProvider.php
+│   │       ├── RouteServiceProvider.php
+│   │       └── RepositoryServiceProvider.php
+│   │
+│   ├── bootstrap/
+│   │   ├── app.php
+│   │   └── cache/
+│   │
+│   ├── config/
+│   │   ├── app.php
+│   │   ├── auth.php
+│   │   ├── cache.php
+│   │   ├── database.php
+│   │   ├── elasticsearch.php
+│   │   ├── filesystems.php
+│   │   ├── horizon.php
+│   │   ├── passport.php
+│   │   ├── permission.php
+│   │   ├── queue.php
+│   │   ├── scout.php
+│   │   └── services.php
+│   │
+│   ├── database/
+│   │   ├── migrations/
+│   │   │   ├── 2024_01_01_000001_create_users_table.php
+│   │   │   ├── 2024_01_01_000002_create_vendors_table.php
+│   │   │   ├── 2024_01_01_000003_create_categories_table.php
+│   │   │   ├── 2024_01_01_000004_create_products_table.php
+│   │   │   ├── 2024_01_01_000005_create_orders_table.php
+│   │   │   ├── 2024_01_01_000006_create_order_items_table.php
+│   │   │   ├── 2024_01_01_000007_create_addresses_table.php
+│   │   │   ├── 2024_01_01_000008_create_reviews_table.php
+│   │   │   ├── 2024_01_01_000009_create_carts_table.php
+│   │   │   ├── 2024_01_01_000010_create_payments_table.php
+│   │   │   ├── 2024_01_01_100000_create_password_reset_tokens_table.php
+│   │   │   ├── 2024_01_01_200000_add_two_factor_columns_to_users_table.php
+│   │   │   ├── 2024_01_01_300000_create_personal_access_tokens_table.php
+│   │   │   └── 2024_01_01_400000_create_permission_tables.php
+│   │   ├── factories/
+│   │   │   ├── UserFactory.php
+│   │   │   ├── VendorFactory.php
+│   │   │   ├── ProductFactory.php
+│   │   │   └── OrderFactory.php
+│   │   └── seeders/
+│   │       ├── DatabaseSeeder.php
+│   │       ├── UserSeeder.php
+│   │       ├── CategorySeeder.php
+│   │       ├── VendorSeeder.php
+│   │       ├── ProductSeeder.php
+│   │       └── PermissionSeeder.php
+│   │
+│   ├── public/
+│   │   ├── index.php
+│   │   ├── assets/
+│   │   └── uploads/
+│   │
+│   ├── resources/
+│   │   ├── views/
+│   │   │   ├── layouts/
+│   │   │   │   ├── app.blade.php
+│   │   │   │   ├── admin.blade.php
+│   │   │   │   └── vendor.blade.php
+│   │   │   ├── admin/
+│   │   │   ├── vendor/
+│   │   │   ├── frontend/
+│   │   │   ├── auth/
+│   │   │   └── emails/
+│   │   ├── js/
+│   │   │   ├── app.js
+│   │   │   ├── admin.js
+│   │   │   └── vendor.js
+│   │   ├── css/
+│   │   │   ├── app.css
+│   │   │   ├── admin.css
+│   │   │   └── vendor.css
+│   │   └── lang/
+│   │       ├── en/
+│   │       └── es/
+│   │
+│   ├── routes/
+│   │   ├── web.php
+│   │   ├── api.php
+│   │   ├── admin.php
+│   │   ├── vendor.php
+│   │   └── channels.php
+│   │
+│   ├── storage/
+│   │   ├── app/
+│   │   ├── framework/
+│   │   └── logs/
+│   │
+│   ├── tests/
+│   │   ├── Feature/
+│   │   │   ├── Auth/
+│   │   │   ├── Product/
+│   │   │   ├── Vendor/
+│   │   │   └── Order/
+│   │   ├── Unit/
+│   │   │   ├── Services/
+│   │   │   ├── Repositories/
+│   │   │   └── Models/
+│   │   ├── Pest.php
+│   │   ├── TestCase.php
+│   │   └── CreatesApplication.php
+│   │
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── artisan
+│   ├── composer.json
+│   ├── composer.lock
+│   ├── package.json
+│   ├── phpunit.xml
+│   ├── vite.config.js
+│   └── webpack.mix.js
+│
+├── jmeter/                       # JMeter Test Plans
+│   ├── marketplace-load-test.jmx
+│   ├── search-performance-test.jmx
+│   └── api-stress-test.jmx
+│
+├── scripts/                      # Deployment and utility scripts
+│   ├── deploy.sh
+│   ├── backup.sh
+│   ├── setup.sh
+│   └── test.sh
+│
+├── docs/                         # Documentation
+│   ├── API.md
+│   ├── DEPLOYMENT.md
+│   ├── DEVELOPMENT.md
+│   └── ARCHITECTURE.md
+│
+└── .github/                      # GitHub Actions
+    └── workflows/
+        ├── ci.yml
+        ├── deploy.yml
+        └── tests.yml
