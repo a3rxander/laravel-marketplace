@@ -1,173 +1,164 @@
 version: '3.8'
 
 services:
-  # PHP-FPM Application
-  app:
+  # Nginx Web Server
+  nginx:
+    image: nginx:alpine
+    container_name: marketplace_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+    networks:
+      - marketplace
+
+  # PHP-FPM
+  php:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: marketplace_app
-    restart: unless-stopped
-    working_dir: /var/www
+    container_name: marketplace_php
     volumes:
-      - ./src:/var/www
+      - ./src:/var/www/html
       - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
     networks:
-      - marketplace_network
+      - marketplace
     depends_on:
       - mysql
       - redis
       - elasticsearch
 
-  # Nginx Web Server
-  nginx:
-    image: nginx:alpine
-    container_name: marketplace_nginx
-    restart: unless-stopped
-    ports:
-      - "8000:80"
-    volumes:
-      - ./src:/var/www
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
-    networks:
-      - marketplace_network
-    depends_on:
-      - app
-
   # MySQL Database
   mysql:
     image: mysql:8.0
     container_name: marketplace_mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: marketplace
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_PASSWORD: secret
-      MYSQL_USER: marketplace
     ports:
       - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-marketplace}
+      MYSQL_USER: ${DB_USERNAME:-marketplace}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
     networks:
-      - marketplace_network
+      - marketplace
 
-  # Redis Cache
+  # Redis for Cache and Sessions
   redis:
-    image: redis:7-alpine
+    image: redis:alpine
     container_name: marketplace_redis
-    restart: unless-stopped
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
     networks:
-      - marketplace_network
-    command: redis-server --appendonly yes
+      - marketplace
 
-  # Memcached
+  # Memcached (alternative cache)
   memcached:
     image: memcached:alpine
     container_name: marketplace_memcached
-    restart: unless-stopped
     ports:
       - "11211:11211"
     networks:
-      - marketplace_network
+      - marketplace
 
-  # Elasticsearch
+  # Elasticsearch for Scout
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    image: elasticsearch:8.11.0
     container_name: marketplace_elasticsearch
-    restart: unless-stopped
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
     ports:
       - "9200:9200"
       - "9300:9300"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
-      - ./docker/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     networks:
-      - marketplace_network
+      - marketplace
 
-  # Laravel Horizon Queue Worker
+  # Laravel Horizon (Queue Worker)
   horizon:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: marketplace_horizon
-    restart: unless-stopped
     command: php artisan horizon
-    working_dir: /var/www
     volumes:
-      - ./src:/var/www
-      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
-    networks:
-      - marketplace_network
+      - ./src:/var/www/html
     depends_on:
-      - app
       - redis
       - mysql
+    networks:
+      - marketplace
 
-  # Queue Worker (backup)
+  # Additional Queue Worker (for specific queues if needed)
   queue:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: marketplace_queue
-    restart: unless-stopped
-    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
-    working_dir: /var/www
+    command: php artisan queue:work --tries=3
     volumes:
-      - ./src:/var/www
-      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
-    networks:
-      - marketplace_network
+      - ./src:/var/www/html
     depends_on:
-      - app
       - redis
       - mysql
+    networks:
+      - marketplace
 
-  # Scheduler (Cron jobs)
+  # Scheduler (Laravel Cron)
   scheduler:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: marketplace_scheduler
-    restart: unless-stopped
-    command: >
-      sh -c "echo '* * * * * cd /var/www && php artisan schedule:run >> /dev/null 2>&1' > /etc/crontabs/www-data
-             && crond -f -l 8"
-    working_dir: /var/www
+    command: /bin/sh -c "while [ true ]; do php artisan schedule:run --verbose --no-interaction & sleep 60; done"
     volumes:
-      - ./marketplace:/var/www
-      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
-    networks:
-      - marketplace_network
+      - ./src:/var/www/html
     depends_on:
-      - app
-
-  # Mailhog (for email testing)
-  mailhog:
-    image: mailhog/mailhog
-    container_name: marketplace_mailhog
-    ports:
-      - "1025:1025"
-      - "8025:8025"
+      - mysql
+      - redis
     networks:
-      - marketplace_network
+      - marketplace
+
+  # phpMyAdmin (optional, for development)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: marketplace_phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${DB_USERNAME:-marketplace}
+      PMA_PASSWORD: ${DB_PASSWORD:-secret}
+    depends_on:
+      - mysql
+    networks:
+      - marketplace
+
+  # Redis Commander (optional, for development)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: marketplace_redis_commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - marketplace
 
 networks:
-  marketplace_network:
+  marketplace:
     driver: bridge
 
 volumes:
   mysql_data:
-    driver: local
-  redis_data:
-    driver: local
   elasticsearch_data:
-    driver: local

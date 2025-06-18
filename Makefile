@@ -1,138 +1,104 @@
-.PHONY: help build up down restart logs shell composer artisan test pint
+.PHONY: help build up down restart logs shell composer artisan test
 
-# Default target
-help:
-	@echo "Available commands:"
-	@echo "  make setup     - Initial project setup"
-	@echo "  make build     - Build Docker containers"
-	@echo "  make up        - Start all services"
-	@echo "  make down      - Stop all services"
-	@echo "  make restart   - Restart all services"
-	@echo "  make logs      - Show container logs"
-	@echo "  make shell     - Enter app container shell"
-	@echo "  make composer  - Run composer install"
-	@echo "  make artisan   - Run artisan commands (make artisan COMMAND='migrate')"
-	@echo "  make test      - Run tests"
-	@echo "  make pint      - Run code style fixer"
-	@echo "  make fresh     - Fresh installation"
-	@echo "  make horizon   - Monitor Horizon dashboard"
+# Default goal
+.DEFAULT_GOAL := help
 
-# Initial setup
-setup: build composer-install artisan-setup
+# Variables
+DOCKER_COMPOSE = docker-compose
+PHP_CONTAINER = marketplace_php
+NGINX_CONTAINER = marketplace_nginx
+MYSQL_CONTAINER = marketplace_mysql
 
-# Build containers
-build:
-	docker-compose build --no-cache
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# Start services
-up:
-	docker-compose up -d
+build: ## Build all docker images
+	$(DOCKER_COMPOSE) build
 
-# Stop services
-down:
-	docker-compose down
+up: ## Start all containers in detached mode
+	$(DOCKER_COMPOSE) up -d
 
-# Restart services
-restart: down up
+down: ## Stop and remove all containers
+	$(DOCKER_COMPOSE) down
 
-# Show logs
-logs:
-	docker-compose logs -f
+restart: ## Restart all containers
+	$(DOCKER_COMPOSE) restart
 
-# Enter container shell
-shell:
-	docker-compose exec app bash
+logs: ## Show logs for all containers
+	$(DOCKER_COMPOSE) logs -f
 
-# Install composer dependencies
-composer-install:
-	docker-compose exec app composer install --optimize-autoloader
+logs-php: ## Show PHP container logs
+	$(DOCKER_COMPOSE) logs -f php
 
-# Update composer dependencies
-composer-update:
-	docker-compose exec app composer update
+logs-horizon: ## Show Horizon container logs
+	$(DOCKER_COMPOSE) logs -f horizon
 
-# Run artisan commands
-artisan:
-	docker-compose exec app php artisan $(COMMAND)
+shell: ## Access PHP container shell
+	docker exec -it $(PHP_CONTAINER) bash
 
-# Initial Laravel setup
-artisan-setup:
-	docker-compose exec app php artisan key:generate
-	docker-compose exec app php artisan storage:link
-	docker-compose exec app php artisan config:cache
-	docker-compose exec app php artisan route:cache
-	docker-compose exec app php artisan view:cache
+shell-mysql: ## Access MySQL container shell
+	docker exec -it $(MYSQL_CONTAINER) mysql -u${DB_USERNAME:-marketplace} -p${DB_PASSWORD:-secret}
 
-# Database setup
-db-setup:
-	docker-compose exec app php artisan migrate:fresh --seed
-	docker-compose exec app php artisan passport:install
-	docker-compose exec app php artisan scout:import "App\Models\Product"
+composer: ## Run composer commands (usage: make composer cmd="install")
+	docker exec -it $(PHP_CONTAINER) composer $(cmd)
 
-# Run tests
-test:
-	docker-compose exec app php artisan test
+artisan: ## Run artisan commands (usage: make artisan cmd="migrate")
+	docker exec -it $(PHP_CONTAINER) php artisan $(cmd)
 
-# Run Pest tests
-pest:
-	docker-compose exec app ./vendor/bin/pest
+test: ## Run tests
+	docker exec -it $(PHP_CONTAINER) php artisan test
 
-# Run code style fixer
-pint:
-	docker-compose exec app ./vendor/bin/pint
+pest: ## Run Pest tests
+	docker exec -it $(PHP_CONTAINER) ./vendor/bin/pest
 
-# Fresh installation
-fresh: down up composer-install artisan-setup db-setup
+phpunit: ## Run PHPUnit tests
+	docker exec -it $(PHP_CONTAINER) ./vendor/bin/phpunit
 
-# Monitor Horizon
-horizon:
-	@echo "Horizon dashboard available at: http://localhost:8000/admin/horizon"
+migrate: ## Run database migrations
+	docker exec -it $(PHP_CONTAINER) php artisan migrate
 
-# Clear all caches
-clear-cache:
-	docker-compose exec app php artisan cache:clear
-	docker-compose exec app php artisan config:clear
-	docker-compose exec app php artisan route:clear
-	docker-compose exec app php artisan view:clear
+seed: ## Run database seeders
+	docker exec -it $(PHP_CONTAINER) php artisan db:seed
 
-# Generate IDE helper files
-ide-helper:
-	docker-compose exec app php artisan ide-helper:generate
-	docker-compose exec app php artisan ide-helper:meta
-	docker-compose exec app php artisan ide-helper:models --nowrite
+fresh: ## Fresh migration with seeders
+	docker exec -it $(PHP_CONTAINER) php artisan migrate:fresh --seed
 
-# Backup database
-backup:
-	docker-compose exec mysql mysqldump -u marketplace -psecret marketplace > backup-$(shell date +%Y%m%d_%H%M%S).sql
+horizon: ## Start Horizon
+	docker exec -it $(PHP_CONTAINER) php artisan horizon
 
-# Production deployment
-deploy:
-	@echo "Deploying to production..."
-	git pull origin main
-	docker-compose -f docker-compose.prod.yml up -d --build
-	docker-compose exec app php artisan migrate --force
-	docker-compose exec app php artisan config:cache
-	docker-compose exec app php artisan route:cache
-	docker-compose exec app php artisan view:cache
-	docker-compose exec app php artisan queue:restart
+queue-work: ## Start queue worker
+	docker exec -it $(PHP_CONTAINER) php artisan queue:work
 
-# Load testing with JMeter
-load-test:
-	@echo "Running load tests..."
-	jmeter -n -t jmeter/marketplace-load-test.jmx -l results/load-test-results.jtl
+scout-import: ## Import all Scout searchable models
+	docker exec -it $(PHP_CONTAINER) php artisan scout:import
 
-# Development helpers
-dev-up: up
-	@echo "Development environment started"
-	@echo "Application: http://localhost:8000"
-	@echo "Mailhog: http://localhost:8025"
-	@echo "Horizon: http://localhost:8000/admin/horizon"
+cache-clear: ## Clear all cache
+	docker exec -it $(PHP_CONTAINER) php artisan cache:clear
+	docker exec -it $(PHP_CONTAINER) php artisan config:clear
+	docker exec -it $(PHP_CONTAINER) php artisan route:clear
+	docker exec -it $(PHP_CONTAINER) php artisan view:clear
 
-# Check container status
-status:
-	docker-compose ps
+optimize: ## Optimize application
+	docker exec -it $(PHP_CONTAINER) php artisan optimize
+	docker exec -it $(PHP_CONTAINER) php artisan config:cache
+	docker exec -it $(PHP_CONTAINER) php artisan route:cache
 
-# Clean up everything
-clean:
-	docker-compose down -v --remove-orphans
-	docker system prune -f
+install: ## Initial setup - build, up, composer install, migrations
+	$(DOCKER_COMPOSE) build
+	$(DOCKER_COMPOSE) up -d
+	sleep 10
+	docker exec -it $(PHP_CONTAINER) composer install
+	docker exec -it $(PHP_CONTAINER) cp .env.example .env
+	docker exec -it $(PHP_CONTAINER) php artisan key:generate
+	docker exec -it $(PHP_CONTAINER) php artisan migrate
+	docker exec -it $(PHP_CONTAINER) php artisan passport:install
+	docker exec -it $(PHP_CONTAINER) php artisan storage:link
+
+stop: ## Stop all containers
+	$(DOCKER_COMPOSE) stop
+
+start: ## Start all stopped containers
+	$(DOCKER_COMPOSE) start
+
+ps: ## List all containers
+	$(DOCKER_COMPOSE) ps
