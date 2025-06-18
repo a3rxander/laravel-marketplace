@@ -47,8 +47,8 @@ return new class extends Migration
             $table->index(['is_featured', 'status']);
             $table->index(['stock_status', 'status']);
             $table->index('rating');
-            $table->index('created_at');
-            $table->fullText(['name', 'description', 'short_description']);
+            $table->index('created_at');   
+            $table->index('name');  
         });
     }
 

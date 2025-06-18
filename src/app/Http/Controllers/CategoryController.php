@@ -2,65 +2,138 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreCategoryRequest;
-use App\Http\Requests\UpdateCategoryRequest;
+use App\Http\Requests\Category\CreateCategoryRequest;
+use App\Http\Requests\Category\UpdateCategoryRequest;
 use App\Models\Category;
+use App\Services\CategoryService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
+    public function __construct(
+        private CategoryService $categoryService
+    ) {
+        $this->middleware('auth:api')->except(['index', 'show', 'tree']);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function index(Request $request): JsonResponse
     {
-        //
+        $categories = $this->categoryService->getCategories($request->all());
+        
+        return response()->json([
+            'success' => true,
+            'data' => $categories,
+            'message' => 'Categories retrieved successfully'
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreCategoryRequest $request)
+    public function show(int $id): JsonResponse
     {
-        //
+        $category = $this->categoryService->getCategoryById($id);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $category,
+            'message' => 'Category retrieved successfully'
+        ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Category $category)
+    public function store(CreateCategoryRequest $request): JsonResponse
     {
-        //
+        $this->authorize('create', Category::class);
+        
+        $category = $this->categoryService->createCategory($request->validated());
+        
+        return response()->json([
+            'success' => true,
+            'data' => $category,
+            'message' => 'Category created successfully'
+        ], 201);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Category $category)
+    public function update(UpdateCategoryRequest $request, int $id): JsonResponse
     {
-        //
+        $category = $this->categoryService->getCategoryById($id);
+        $this->authorize('update', $category);
+        
+        $updatedCategory = $this->categoryService->updateCategory($id, $request->validated());
+        
+        return response()->json([
+            'success' => true,
+            'data' => $updatedCategory,
+            'message' => 'Category updated successfully'
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateCategoryRequest $request, Category $category)
+    public function destroy(int $id): JsonResponse
     {
-        //
+        $category = $this->categoryService->getCategoryById($id);
+        $this->authorize('delete', $category);
+        
+        $this->categoryService->deleteCategory($id);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Category deleted successfully'
+        ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Category $category)
+    public function tree(): JsonResponse
     {
-        //
+        $tree = $this->categoryService->getCategoryTree();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $tree,
+            'message' => 'Category tree retrieved successfully'
+        ]);
+    }
+
+    public function featured(): JsonResponse
+    {
+        $featuredCategories = $this->categoryService->getFeaturedCategories();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $featuredCategories,
+            'message' => 'Featured categories retrieved successfully'
+        ]);
+    }
+
+    public function updateStatus(Request $request, int $id): JsonResponse
+    {
+        $category = $this->categoryService->getCategoryById($id);
+        $this->authorize('updateStatus', $category);
+        
+        $request->validate([
+            'is_active' => 'required|boolean'
+        ]);
+        
+        $updatedCategory = $this->categoryService->updateCategoryStatus($id, $request->is_active);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $updatedCategory,
+            'message' => 'Category status updated successfully'
+        ]);
+    }
+
+    public function reorder(Request $request): JsonResponse
+    {
+        $this->authorize('reorder', Category::class);
+        
+        $request->validate([
+            'categories' => 'required|array',
+            'categories.*.id' => 'required|integer|exists:categories,id',
+            'categories.*.sort_order' => 'required|integer|min:0'
+        ]);
+        
+        $this->categoryService->reorderCategories($request->categories);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Categories reordered successfully'
+        ]);
     }
 }
