@@ -55,9 +55,11 @@ RUN mkdir -p storage/app/public \
     storage/framework/testing \
     storage/framework/views \
     storage/logs \
-    bootstrap/cache && \
+    bootstrap/cache \
+    /var/www/.config/psysh && \
     chmod -R 775 storage bootstrap/cache && \
-    chown -R www-data:www-data storage bootstrap/cache
+    chmod -R 755 /var/www/.config && \
+    chown -R www-data:www-data storage bootstrap/cache /var/www/.config
 
 # Run as www-data
 USER www-data
