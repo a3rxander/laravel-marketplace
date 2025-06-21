@@ -23,8 +23,8 @@ return new class extends Migration
             $table->index('product_id');
             
             // Un usuario no puede tener el mismo producto duplicado en el carrito
-            $table->unique(['user_id', 'product_id', 'product_options'], 'cart_user_product_unique');
-            $table->unique(['session_id', 'product_id', 'product_options'], 'cart_session_product_unique');
+            $table->unique(['user_id', 'product_id'], 'cart_user_product_unique');
+            $table->unique(['session_id', 'product_id'], 'cart_session_product_unique');
         });
     }
 

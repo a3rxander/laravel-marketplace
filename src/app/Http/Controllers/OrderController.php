@@ -50,6 +50,17 @@ class OrderController extends Controller
         $orderData['user_id'] = auth()->id();
         
         $order = $this->orderService->createOrder($orderData);
+
+        if ($order->payment_status === 'pending') 
+        {
+            // Simular referencia de pago (o usar la real de tu gateway)
+            $paymentReference = 'PAY-' . strtoupper(Str::random(10));
+            
+            // Despachar job de procesamiento
+            \App\Jobs\ProcessOrderPayment::dispatch($order, $paymentReference)
+                ->onQueue('orders')
+                ->delay(now()->addSeconds(5));
+        }
         
         return response()->json([
             'success' => true,
@@ -143,6 +154,15 @@ class OrderController extends Controller
         $this->authorize('confirm', $order);
         
         $confirmedOrder = $this->orderService->confirmOrder($id);
+
+        // Dispatch jobs for sending email and updating inventory
+        \App\Jobs\SendOrderConfirmationEmail::dispatch($confirmedOrder)
+            ->onQueue('emails')
+            ->delay(now()->addSeconds(10));
+
+        \App\Jobs\UpdateProductInventory::dispatch($confirmedOrder)
+            ->onQueue('inventory')
+            ->delay(now()->addSeconds(20));
         
         return response()->json([
             'success' => true,
@@ -242,6 +262,39 @@ class OrderController extends Controller
             'success' => true,
             'data' => $invoice,
             'message' => 'Invoice generated successfully'
+        ]);
+    }
+
+    public function handlePaymentWebhook(Request $request): JsonResponse
+    {
+        $request->validate([
+            'order_id' => 'required|exists:orders,id',
+            'payment_reference' => 'required|string',
+            'status' => 'required|in:success,failed'
+        ]);
+
+        $order = Order::find($request->order_id);
+        
+        if ($request->status === 'success') {
+            // Procesar pago exitoso usando nuestro job
+            \App\Jobs\ProcessOrderPayment::dispatch($order, $request->payment_reference)
+                ->onQueue('orders');
+                
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment webhook processed successfully'
+            ]);
+        }
+        
+        // Manejar pago fallido
+        $order->update([
+            'payment_status' => 'failed',
+            'status' => 'cancelled'
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment failed, order cancelled'
         ]);
     }
 }

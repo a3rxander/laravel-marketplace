@@ -13,13 +13,12 @@ return new class extends Migration
     {
         Schema::create('seller_notifications', function (Blueprint $table) {
             $table->id();
-               $table->foreignId('seller_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('seller_id')->constrained()->cascadeOnDelete();
             $table->string('type'); // new_order, low_stock, payment_due, etc.
             $table->string('title');
             $table->text('message');
             $table->json('data')->nullable();
-            $table->timestamp('read_at')->nullable();
-            $table->timestamps();
+            $table->timestamp('read_at')->nullable(); 
             
             $table->index(['seller_id', 'read_at']);
             $table->index(['type', 'created_at']);
