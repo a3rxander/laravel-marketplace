@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 class ProductController extends Controller
 {
     protected $productService;
+    
     public function __construct(ProductService $productService)
     {
         $this->productService = $productService; 
@@ -143,15 +144,19 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * Búsqueda básica con Scout/Elasticsearch
+     */
     public function search(Request $request): JsonResponse
     {
         $request->validate([
-            'q' => 'required|string|min:2',
+            'q' => 'nullable|string|min:1', // Cambiado para permitir búsquedas vacías
             'category_id' => 'nullable|exists:categories,id',
             'min_price' => 'nullable|numeric|min:0',
             'max_price' => 'nullable|numeric|min:0',
             'sort_by' => 'nullable|in:name,price,rating,created_at',
-            'sort_order' => 'nullable|in:asc,desc'
+            'sort_order' => 'nullable|in:asc,desc',
+            'per_page' => 'nullable|integer|min:1|max:100'
         ]);
         
         $results = $this->productService->searchProducts($request->all());
@@ -159,7 +164,116 @@ class ProductController extends Controller
         return response()->json([
             'success' => true,
             'data' => $results,
+            'search_query' => $request->input('q'),
+            'filters_applied' => $request->except(['q', 'page', 'per_page']),
             'message' => 'Search results retrieved successfully'
         ]);
     }
-}   
+
+    /**
+     * Búsqueda avanzada con facetas y agregaciones
+     */
+    public function advancedSearch(Request $request): JsonResponse
+    {
+        $request->validate([
+            'q' => 'nullable|string|min:1',
+            'category_id' => 'nullable|exists:categories,id',
+            'min_price' => 'nullable|numeric|min:0',
+            'max_price' => 'nullable|numeric|min:0',
+            'sort_by' => 'nullable|in:name,price,rating,created_at',
+            'sort_order' => 'nullable|in:asc,desc',
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'include_facets' => 'nullable|boolean'
+        ]);
+        
+        $results = $this->productService->advancedSearchProducts($request->all());
+        
+        return response()->json([
+            'success' => true,
+            'data' => $results,
+            'message' => 'Advanced search results retrieved successfully'
+        ]);
+    }
+
+    /**
+     * Autocomplete para búsqueda
+     */
+    public function autocomplete(Request $request): JsonResponse
+    {
+        $request->validate([
+            'q' => 'required|string|min:1|max:50'
+        ]);
+        
+        $suggestions = $this->productService->getSearchSuggestions($request->input('q'));
+        
+        return response()->json([
+            'success' => true,
+            'data' => $suggestions,
+            'message' => 'Autocomplete suggestions retrieved successfully'
+        ]);
+    }
+
+    /**
+     * Productos similares usando Scout
+     */
+    public function similar(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'limit' => 'nullable|integer|min:1|max:20'
+        ]);
+        
+        $limit = $request->input('limit', 6);
+        $similarProducts = $this->productService->getSimilarProducts($id, $limit);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $similarProducts,
+            'message' => 'Similar products retrieved successfully'
+        ]);
+    }
+
+    /**
+     * Endpoint para debug de Scout
+     */
+    public function searchDebug(Request $request): JsonResponse
+    {
+        if (!app()->environment(['local', 'testing'])) {
+            abort(404);
+        }
+        
+        $request->validate([
+            'q' => 'required|string|min:1'
+        ]);
+        
+        $debugInfo = $this->productService->getSearchDebugInfo($request->input('q'));
+        
+        return response()->json([
+            'success' => true,
+            'data' => $debugInfo,
+            'message' => 'Search debug information retrieved'
+        ]);
+    }
+
+    /**
+     * Reindexar productos en Elasticsearch
+     */
+    public function reindex(Request $request): JsonResponse
+    {
+        if (!auth()->user()->can('admin.products.reindex')) {
+            abort(403);
+        }
+        
+        $request->validate([
+            'batch_size' => 'nullable|integer|min:10|max:1000'
+        ]);
+        
+        $batchSize = $request->input('batch_size', 100);
+        $result = $this->productService->reindexProducts($batchSize);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+            'message' => 'Products reindexed successfully'
+        ]);
+    }
+}

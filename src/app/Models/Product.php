@@ -88,24 +88,45 @@ class Product extends Model implements Explored
     public function toSearchableArray(): array
     {
         return [
+            'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'price' => $this->price,
-            'rating' => $this->rating,
+            'short_description' => $this->short_description,
+            'sku' => $this->sku,
+            'price' => (float) $this->price,
+            'rating' => (float) $this->rating,
             'category_id' => $this->category_id,
             'seller_id' => $this->seller_id,
             'status' => $this->status,
             'is_featured' => $this->is_featured,
             'is_digital' => $this->is_digital,
             'stock_status' => $this->stock_status,
+            'stock_quantity' => $this->stock_quantity,
+            'total_sales' => $this->total_sales,
+            'view_count' => $this->view_count,
+            'created_at' => $this->created_at->toISOString(),
+            'updated_at' => $this->updated_at->toISOString(),
+            // Incluir datos de relaciones
+            'category_name' => $this->category?->name,
+            'seller_name' => $this->seller?->name,
         ];
     }
 
-    
+    /**
+     * Determine if the model should be searchable.
+     */
     public function shouldBeSearchable(): bool
     {
         return $this->status === 'active';
     }
+
+    /**
+     * Get the index name for the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'products_index';
+    } 
 
     // Relationships
     public function seller(): BelongsTo
