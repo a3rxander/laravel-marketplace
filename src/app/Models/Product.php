@@ -6,9 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+ 
 use Laravel\Scout\Searchable;
+use JeroenG\Explorer\Application\Explored;
 
-class Product extends Model
+
+class Product extends Model implements Explored
 {
     use HasFactory, Searchable;
 
@@ -61,6 +64,48 @@ class Product extends Model
         'meta_data' => 'array',
         'published_at' => 'datetime',
     ];
+
+     public function mappableAs(): array
+    {
+        return [
+            'name' => [
+                'type' => 'text',
+                'analyzer' => 'standard'
+            ],
+            'description' => 'text',
+            'price' => 'float',
+            'rating' => 'float',
+            'category_id' => 'keyword',
+            'seller_id' => 'keyword',
+            'status' => 'keyword',
+            'is_featured' => 'boolean',
+            'is_digital' => 'boolean',
+            'stock_status' => 'keyword',
+        ];
+    }
+
+
+    public function toSearchableArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'description' => $this->description,
+            'price' => $this->price,
+            'rating' => $this->rating,
+            'category_id' => $this->category_id,
+            'seller_id' => $this->seller_id,
+            'status' => $this->status,
+            'is_featured' => $this->is_featured,
+            'is_digital' => $this->is_digital,
+            'stock_status' => $this->stock_status,
+        ];
+    }
+
+    
+    public function shouldBeSearchable(): bool
+    {
+        return $this->status === 'active';
+    }
 
     // Relationships
     public function seller(): BelongsTo
@@ -234,29 +279,6 @@ class Product extends Model
     public function incrementSales(int $quantity = 1): void
     {
         $this->increment('total_sales', $quantity);
-    }
-
-    // Scout configuration
-    public function toSearchableArray(): array
-    {
-        return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'description' => $this->description,
-            'short_description' => $this->short_description,
-            'sku' => $this->sku,
-            'price' => $this->price,
-            'category_id' => $this->category_id,
-            'seller_id' => $this->seller_id,
-            'status' => $this->status,
-            'is_featured' => $this->is_featured,
-            'rating' => $this->rating,
-            'total_sales' => $this->total_sales,
-        ];
-    }
-
-    public function shouldBeSearchable(): bool
-    {
-        return $this->status === 'active' && $this->seller->status === 'approved';
-    }
+    } 
+     
 }
