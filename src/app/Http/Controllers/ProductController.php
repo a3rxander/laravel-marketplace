@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Product\CreateProductRequest;
-use App\Http\Requests\Product\UpdateProductRequest;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
 use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
@@ -43,10 +43,8 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(CreateProductRequest $request): JsonResponse
-    {
-        $this->authorize('create', Product::class);
-        
+    public function store(StoreProductRequest $request): JsonResponse
+    { 
         $productData = $request->validated();
         
         // For sellers, automatically set seller_id
@@ -254,26 +252,5 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Reindexar productos en Elasticsearch
-     */
-    public function reindex(Request $request): JsonResponse
-    {
-        if (!auth()->user()->can('admin.products.reindex')) {
-            abort(403);
-        }
-        
-        $request->validate([
-            'batch_size' => 'nullable|integer|min:10|max:1000'
-        ]);
-        
-        $batchSize = $request->input('batch_size', 100);
-        $result = $this->productService->reindexProducts($batchSize);
-        
-        return response()->json([
-            'success' => true,
-            'data' => $result,
-            'message' => 'Products reindexed successfully'
-        ]);
-    }
+     
 }

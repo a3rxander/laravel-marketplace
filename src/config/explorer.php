@@ -29,9 +29,8 @@ return [
      * of the mapping possibilities can be found in the documentation of Explorer's repository.
      */
     'indexes' => [
-          \App\Models\Product::class
+         \App\Models\Product::class
     ],
-
     /**
      * You may opt to keep the old indices after the alias is pointed to a new index.
      * A model is only using index aliases if it implements the Aliased interface.

@@ -52,12 +52,7 @@ class ProductService
         $data['min_stock_level'] = $data['min_stock_level'] ?? 5;
         $data['published_at'] = $data['status'] === 'active' ? now() : null;
 
-        $product = $this->productRepository->create($data);
-        
-        // Index in Elasticsearch if active
-        if ($product->status === 'active') {
-            $this->indexProduct($product);
-        }
+        $product = $this->productRepository->create($data); 
         
         return $product;
     }
@@ -81,20 +76,13 @@ class ProductService
             $data['published_at'] = now();
         }
 
-        $updatedProduct = $this->productRepository->update($product, $data);
-        
-        // Update in Elasticsearch
-        $this->indexProduct($updatedProduct);
-        
+        $updatedProduct = $this->productRepository->update($product, $data); 
         return $updatedProduct;
     }
 
     public function deleteProduct(int $id): bool
     {
-        $product = $this->getProductById($id);
-        
-        // Remove from Elasticsearch
-        $this->removeFromIndex($product);
+        $product = $this->getProductById($id); 
         
         return $this->productRepository->delete($product);
     }
@@ -115,31 +103,14 @@ class ProductService
             $updateData['published_at'] = now();
         }
         
-        $updatedProduct = $this->productRepository->update($product, $updateData);
-        
-        // Update in Elasticsearch based on status
-        if ($status === 'active') {
-            $this->indexProduct($updatedProduct);
-        } else {
-            $this->removeFromIndex($updatedProduct);
-        }
+        $updatedProduct = $this->productRepository->update($product, $updateData); 
         
         return $updatedProduct;
     }
 
     public function bulkUpdateStatus(array $productIds, string $status): int
     {
-        $updatedCount = $this->productRepository->bulkUpdateStatus($productIds, $status);
-        
-        // Update Elasticsearch for all affected products
-        $products = Product::whereIn('id', $productIds)->get();
-        foreach ($products as $product) {
-            if ($status === 'active') {
-                $this->indexProduct($product);
-            } else {
-                $this->removeFromIndex($product);
-            }
-        }
+        $updatedCount = $this->productRepository->bulkUpdateStatus($productIds, $status); 
         
         return $updatedCount;
     }
@@ -266,41 +237,7 @@ class ProductService
         }
     }
 
-    /**
-     * Reindex products in Elasticsearch
-     */
-    public function reindexProducts(int $batchSize = 100): array
-    {
-        try {
-            // Clear existing index
-            Artisan::call('scout:flush', ['model' => 'App\\Models\\Product']);
-            
-            // Import all products
-            Artisan::call('scout:import', [
-                'model' => 'App\\Models\\Product',
-                '--chunk' => $batchSize
-            ]);
-            
-            $totalProducts = Product::where('status', 'active')->count();
-            
-            return [
-                'status' => 'success',
-                'total_products' => $totalProducts,
-                'batch_size' => $batchSize,
-                'message' => "Successfully reindexed {$totalProducts} products"
-            ];
-        } catch (\Exception $e) {
-            \Log::error('Failed to reindex products', [
-                'error' => $e->getMessage(),
-                'batch_size' => $batchSize
-            ]);
-            
-            return [
-                'status' => 'error',
-                'message' => 'Failed to reindex products: ' . $e->getMessage()
-            ];
-        }
-    }
+     
 
     public function getFeaturedProducts(int $limit = 12): array
     {
@@ -337,10 +274,7 @@ class ProductService
             'stock_status' => $this->determineStockStatus($quantity)
         ];
         
-        $updatedProduct = $this->productRepository->update($product, $updateData);
-        
-        // Update in Elasticsearch
-        $this->indexProduct($updatedProduct);
+        $updatedProduct = $this->productRepository->update($product, $updateData); 
         
         return $updatedProduct;
     }
@@ -379,39 +313,6 @@ class ProductService
             'total_views' => $this->productRepository->getTotalViews($sellerId),
         ];
     }
-
-    /**
-     * Index product in Elasticsearch
-     */
-    protected function indexProduct(Product $product): void
-    {
-        try {
-            if ($product->shouldBeSearchable()) {
-                $product->searchable();
-            }
-        } catch (\Exception $e) {
-            \Log::warning('Failed to index product in Elasticsearch', [
-                'product_id' => $product->id,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Remove product from Elasticsearch index
-     */
-    protected function removeFromIndex(Product $product): void
-    {
-        try {
-            $product->unsearchable();
-        } catch (\Exception $e) {
-            \Log::warning('Failed to remove product from Elasticsearch', [
-                'product_id' => $product->id,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
     /**
      * Get popular search terms (mock implementation)
      */
