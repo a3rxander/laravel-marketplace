@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Collection;
+use Log;
 
 abstract class BaseRepository
 {
@@ -31,6 +32,7 @@ abstract class BaseRepository
 
     public function create(array $data): Model
     {
+        Log::info('Creating model with data:', $data);
         return $this->model->create($data);
     }
 

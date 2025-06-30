@@ -45,7 +45,7 @@ class ProductPolicy
         // Admins can always create products
         if ($user->is_admin) {
             return true;
-        }
+        } 
 
         // Sellers can create products if approved
         return $user->seller && $user->seller->status === 'approved';

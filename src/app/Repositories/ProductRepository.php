@@ -54,7 +54,7 @@ class ProductRepository extends BaseRepository
             $results = $scoutQuery->paginate($perPage, 'page', $page);
             
             // Cargar relaciones
-            $results->load(['seller', 'category']);
+            $results->getCollection()->load(['seller', 'category']);
             
             return $results;
         } catch (\Exception $e) {

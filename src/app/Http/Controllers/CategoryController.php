@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Category\CreateCategoryRequest;
-use App\Http\Requests\Category\UpdateCategoryRequest;
+use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use App\Services\CategoryService;
 use Illuminate\Http\JsonResponse;
@@ -39,7 +39,7 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function store(CreateCategoryRequest $request): JsonResponse
+    public function store(StoreCategoryRequest $request): JsonResponse
     {
         $this->authorize('create', Category::class);
         

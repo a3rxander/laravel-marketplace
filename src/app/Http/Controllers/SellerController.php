@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Seller\CreateSellerRequest;
-use App\Http\Requests\Seller\UpdateSellerRequest;
-use App\Http\Requests\Seller\ApproveSellerRequest;
+use App\Http\Requests\StoreSellerRequest;
+use App\Http\Requests\UpdateSellerRequest;
+use App\Http\Requests\ApproveSellerRequest;
 use App\Models\Seller;
 use App\Services\SellerService;
 use Illuminate\Http\JsonResponse;
@@ -43,10 +43,8 @@ class SellerController extends Controller
         ]);
     }
 
-    public function store(CreateSellerRequest $request): JsonResponse
-    {
-        $this->authorize('create', Seller::class);
-        
+    public function store(StoreSellerRequest $request): JsonResponse
+    { 
         $sellerData = $request->validated();
         $sellerData['user_id'] = auth()->id();
         

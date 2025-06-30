@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Order\CreateOrderRequest;
-use App\Http\Requests\Order\UpdateOrderRequest;
+use App\Http\Requests\StoreOrderRequest;
+use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Order;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
@@ -42,7 +42,7 @@ class OrderController extends Controller
         ]);
     }
 
-    public function store(CreateOrderRequest $request): JsonResponse
+    public function store(StoreOrderRequest $request): JsonResponse
     {
         $this->authorize('create', Order::class);
         
