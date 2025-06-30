@@ -41,6 +41,12 @@ class SellerService
 
     public function createSeller(array $data): Seller
     {
+        //validate if exists seller then error
+        if ($this->sellerRepository->findByUserId($data['user_id'])) 
+        {
+            throw new \Exception('Seller already exists');
+        }
+
         // Generate slug if not provided
         if (!isset($data['slug'])) {
             $data['slug'] = $this->generateUniqueSlug($data['business_name']);
